@@ -1,0 +1,75 @@
+import * as THREE from 'three';
+
+// v28 — coordinate-matched particle reconstruction from a generated reference cut.
+// No previous-pass imports. No runtime image/texture sky. The reference was reduced to
+// a 48×27 brightness+color blueprint and every visible element is rebuilt with THREE.Points.
+
+const title=document.querySelector('#title');
+if(title) title.textContent='STARLIT SKY · CINEMATIC PASS 28';
+const loading=document.querySelector('#loading');
+const credit=document.querySelector('#credit');
+if(credit) credit.textContent='Three.js · reference-coordinate particle reconstruction';
+
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.setClearColor(0x01030a,1);
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.35));
+renderer.setSize(innerWidth,innerHeight,false);
+Object.assign(renderer.domElement.style,{position:'fixed',inset:'0',width:'100vw',height:'100vh',zIndex:'1',pointerEvents:'none'});
+document.body.prepend(renderer.domElement);
+
+const scene=new THREE.Scene();
+const camera=new THREE.OrthographicCamera(-80,80,50,-50,-10,10);camera.position.z=3;
+
+const MW=48,MH=27,MN=MW*MH;
+const DENS_B64='WldRVExHRjw4MyslHBYRFRQXFBQQExANEA0NDBARCREODQwNDQkMCAoMCwoKCgcJWV1eVFdVUU5APDo0KiAWExMWFRYUFRQPEhALEBEREA0MERANCwsIDAoNCQkMDQgHUVtobWFfZWBbTkM9Lh4ZIiMdFxUVFBUVDw8TEA0QDxAREQ8ODAsMDQsJCgoKCAkIREtYZnR7dXJ6bVZHPCkzKykjGhkdGhYUExUTExEPEhEPEREODQwODQ4LBwgMCwkIQUhNXWZ0ho99dIB9UkFlODM1KCAfHRsYFRUYHhkVExEOExIOCw4ODQsMCwkJDAgIMjhDTVxteIOtiIR9anhdcU87NSwoIyMeHR0dHRUVFBQVDA0NDg0MDAsMCwkJCQoIKi06QExdcIuswMSAgZiOo21LOi0tLy0jHRsgGhkbGBYUEA0ODAwNCAgNCAoLCggJIykwNDdIYnKDrtW8moVtZWNeTT47OTcvJRkcICAcGhgVFRMODg4ODQsLDAsLDQsHGx4hJi85SmVydX+RoZq4vZWEdmVVUEk7KR8cIyIfHhwVFBESERATEQ4NDQsMCwkJFRgfHSMtN1RMWmRxjY+qvMa1p5h1cnJKMyglLSojISAcGhURERUPEQ4QDA4NCwoJEhYaHR4jKi89TE1QZGV0kqbE6M+qnndKNzxCPzQsIxwbGhsZFRUSDxgPDQwLCQgIFREVFxodIigvNTk/TVlvfGyXvMLSzHtKP1x0VUYyLCcgHR0eGhYVFhMTDwsMCwwMEhERExUZGSIjKCszQ1RvcW54lKqsydu5jHR+cVlBPzwyJiEbGxoVIhUUDw4MCwkJDxEQEhQVFhoaJS4uMz1JYmyGrq/LtNTx2aebZVBmWEk9MCcjJBsbFREUEg8QDgwMDg8ODhMSFRYYGR8oKi09SFFicoay2rWg3uCypnpnXE9LQTEpOCgdGxgYFhQTEQwMDg8PDg0SFBEUFhsdIyQrMz1HVmeNspiTqbXRyL6ugG5hUEIyUzcjIh8hIh0WDwsNDRAODQ4QDhISEhUZGB4gJTE3Qk1faWiLjYe1hI3LzbiCbFhRQjgqIxwdGhsaEw8SCg8PDw8PDw8VEBEUGBsgICcrLzhBSE9id42MmXJ7uuDHmoBlVUg9LSkiHB0dGhURCwwMDQwNDQwODhATEhMVGBwjIycyNz1KWGd/mpeRkaiqr8KRa1pLRDUqJCEiHBoWDAsKDAwJDBANDxARExIRFxccHiYoKSwzQE5ecJCMcV9kja2uinBeUD87NCssJR8dDAwLDgsKDA4SDhAMEBEUFRUYGBshIyUpMDxCVmpzeWVlb3N4h6mVYFdMUkA4LSUfDAwKCwwNDQsODw0ODA4PDhUVExYdIB0gKC43PktPWlhfWlFldqivhm5gT0hGOS4lCQwJCg8MCgwODAwLDQ8NEQ4TFBEXGRUcHyMrMDU9P0ZUUUtGZ214e3J7cV5PST81CwgICggICAwMDA4NDQ4QExMQERMVFRQVFxwdJyowMj9BTEI6Q05UZFxogn9nZUxCCggICAsKDAgLDA0ODgwLDA4PDhISERMTFhUWGh4lJyssQDw7OUBJUFBVVFhdUk5ECggIDAgKDAwNDAwKCgsIDA0MDhAQERITERMVExcbHCEjJSgxMTE2PUpHRkhFV15ICQgJCgYICQsLCwkICQgMDBAMDQ0QDxEMDxMRExMVGRkaHyAhKCkoNTg6PUE9PUJF';
+const COLOR_B64='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';
+
+function decode(s){const b=atob(s),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
+const dens=decode(DENS_B64),cols=decode(COLOR_B64);
+
+// Dust is derived from the same reference map: locally dark cells surrounded by brighter cells.
+const dust=new Float32Array(MN);
+for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
+  const i=y*MW+x, c=dens[i]/255;let sum=0,n=0;
+  for(let yy=Math.max(0,y-2);yy<=Math.min(MH-1,y+2);yy++)for(let xx=Math.max(0,x-2);xx<=Math.min(MW-1,x+2);xx++){sum+=dens[yy*MW+xx]/255;n++;}
+  const broad=sum/n;dust[i]=Math.max(0,broad-c)*Math.sqrt(Math.max(.001,broad));
+}
+let dmax=0;for(const v of dust)dmax=Math.max(dmax,v);if(dmax>0)for(let i=0;i<MN;i++)dust[i]/=dmax;
+
+function rngFactory(seed=28092026){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+let rnd=rngFactory();const rand=(a,b)=>a+(b-a)*rnd();const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+function tex(kind){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');const g=x.createRadialGradient(32,32,0,32,32,32);if(kind==='star'){g.addColorStop(0,'#fff');g.addColorStop(.08,'rgba(255,255,255,1)');g.addColorStop(.20,'rgba(255,255,255,.90)');g.addColorStop(.38,'rgba(255,255,255,.36)');g.addColorStop(.62,'rgba(255,255,255,.06)');g.addColorStop(1,'rgba(0,0,0,0)');}else{g.addColorStop(0,'rgba(255,255,255,.58)');g.addColorStop(.25,'rgba(255,255,255,.22)');g.addColorStop(.60,'rgba(255,255,255,.045)');g.addColorStop(1,'rgba(0,0,0,0)');}x.fillStyle=g;x.fillRect(0,0,64,64);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;}
+const starTex=tex('star'),softTex=tex('soft');
+const mats=[],objs=[];
+function mat(texture,{opacity=1,min=.9,max=2,tw=.01,blend=THREE.AdditiveBlending}={}){const m=new THREE.ShaderMaterial({transparent:true,depthWrite:false,depthTest:false,blending:blend,uniforms:{uMap:{value:texture},uOpacity:{value:opacity},uTime:{value:0},uDpr:{value:renderer.getPixelRatio()},uMin:{value:min},uMax:{value:max}},vertexShader:`attribute float aSize;attribute float aAlpha;attribute float aSeed;attribute vec3 color;varying vec3 vColor;varying float vAlpha;uniform float uTime;uniform float uDpr;uniform float uMin;uniform float uMax;void main(){vColor=color;vAlpha=aAlpha;float t=1.0+sin(uTime*(.12+aSeed*.32)+aSeed*57.0)*${tw.toFixed(3)};gl_PointSize=clamp(aSize*uDpr*t,uMin*uDpr,uMax*uDpr);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,fragmentShader:`uniform sampler2D uMap;uniform float uOpacity;varying vec3 vColor;varying float vAlpha;void main(){vec4 t=texture2D(uMap,gl_PointCoord);float a=t.a*vAlpha*uOpacity;if(a<.001)discard;gl_FragColor=vec4(vColor,a);}`});mats.push(m);return m;}
+function system(count,gen,material,order){const p=new Float32Array(count*3),c=new Float32Array(count*3),s=new Float32Array(count),a=new Float32Array(count),seed=new Float32Array(count);for(let i=0;i<count;i++){const v=gen(i);p[i*3]=v.x;p[i*3+1]=v.y;p[i*3+2]=v.z||0;c[i*3]=v.col[0];c[i*3+1]=v.col[1];c[i*3+2]=v.col[2];s[i]=v.size;a[i]=v.alpha;seed[i]=rnd();}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));g.setAttribute('color',new THREE.BufferAttribute(c,3));g.setAttribute('aSize',new THREE.BufferAttribute(s,1));g.setAttribute('aAlpha',new THREE.BufferAttribute(a,1));g.setAttribute('aSeed',new THREE.BufferAttribute(seed,1));const pts=new THREE.Points(g,material);pts.renderOrder=order;scene.add(pts);objs.push(pts);}
+function clear(){for(const o of objs.splice(0)){scene.remove(o);o.geometry.dispose();}for(const m of mats.splice(0))m.dispose();}
+
+function makeCDF(kind){const a=new Float64Array(MN);let total=0;for(let i=0;i<MN;i++){const d=dens[i]/255,du=dust[i];let w=.01;if(kind==='bg')w=.05+Math.pow(d,.82);if(kind==='fine')w=.002+Math.pow(d,1.55)*1.7;if(kind==='cloud')w=.0004+Math.pow(d,2.25)*2.3;if(kind==='dust')w=.0001+Math.pow(du,1.55)*2.6;total+=w;a[i]=total;}return{a,total};}
+const CBG=makeCDF('bg'),CF=makeCDF('fine'),CC=makeCDF('cloud'),CD=makeCDF('dust');
+function pickIndex(c){let r=rnd()*c.total,lo=0,hi=MN-1;while(lo<hi){const m=(lo+hi)>>1;if(c.a[m]<r)lo=m+1;else hi=m;}return lo;}
+function pointFor(i,W){const x=i%MW,y=(i/MW)|0,u=(x+rnd())/MW,v=(y+rnd())/MH;return{x:(u-.5)*W,y:(.5-v)*100};}
+function colorFor(i,gain=1){const k=i*3;let r=Math.pow(cols[k]/255,.86)*gain,g=Math.pow(cols[k+1]/255,.86)*gain,b=Math.pow(cols[k+2]/255,.86)*gain;return[clamp(r,0,1),clamp(g,0,1),clamp(b,0,1)];}
+
+let token=0;const wait=()=>new Promise(r=>setTimeout(r,0));
+async function build(){const my=++token;clear();rnd=rngFactory(28092026);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.35));renderer.setSize(innerWidth,innerHeight,false);const W=100*innerWidth/Math.max(1,innerHeight);camera.left=-W/2;camera.right=W/2;camera.top=50;camera.bottom=-50;camera.updateProjectionMatrix();const progress=(a,b)=>{if(loading)loading.innerHTML=`${a}<br><span style="opacity:.48">${b}</span>`;};
+
+progress('REFERENCE COORDINATES','1/5 · full-sky star field');
+system(38000,()=>{const i=pickIndex(CBG),p=pointFor(i,W),d=dens[i]/255,q=rnd();let col=colorFor(i,rand(.72,1.05));if(d<.10){const b=rand(.68,.94);col=[b*.70,b*.80,b];}return{...p,z:-.8,col,size:q<.93?rand(1.06,1.34):rand(1.34,1.58),alpha:rand(.18,.42)*(.68+d*.48)};},mat(starTex,{opacity:.90,min:1.08,max:1.62,tw:.010}),1);renderer.render(scene,camera);await wait();if(my!==token)return;
+
+progress('REFERENCE COORDINATES','2/5 · dense Milky Way particle body');
+system(105000,()=>{const i=pickIndex(CF),p=pointFor(i,W),d=dens[i]/255;return{...p,z:-.18,col:colorFor(i,rand(.90,1.18)),size:rnd()<.94?rand(1.14,1.46):rand(1.46,1.72),alpha:rand(.28,.64)*(.54+d*.76)};},mat(starTex,{opacity:1.03,min:1.16,max:1.78,tw:.014}),3);renderer.render(scene,camera);await wait();if(my!==token)return;
+
+progress('REFERENCE COORDINATES','3/5 · warm core / cool halo / nebula clouds');
+system(34000,()=>{const i=pickIndex(CC),p=pointFor(i,W),d=dens[i]/255;return{...p,z:-.35,col:colorFor(i,rand(.74,1.05)),size:rand(2.0,6.8)*(.80+d*.48),alpha:rand(.014,.064)*(.42+d*.85)};},mat(softTex,{opacity:.94,min:1.5,max:7.3,tw:.001}),2);renderer.render(scene,camera);await wait();if(my!==token)return;
+
+progress('REFERENCE COORDINATES','4/5 · sampled Great Rift and dark dust');
+system(14000,()=>{const i=pickIndex(CD),p=pointFor(i,W),d=dust[i],q=rand(.004,.018);return{...p,z:.12,col:[q,q*.92,q*1.14],size:rand(2.8,8.3)*(.76+d*.62),alpha:rand(.025,.105)*(.42+d*.78)};},mat(softTex,{opacity:.82,min:1.8,max:8.8,tw:0,blend:THREE.NormalBlending}),5);renderer.render(scene,camera);await wait();if(my!==token)return;
+
+progress('REFERENCE COORDINATES','5/5 · compact bright-star accents');
+system(150,()=>{const i=pickIndex(CC),p=pointFor(i,W),d=dens[i]/255;let col=colorFor(i,1.18);return{...p,z:.32,col,size:rand(1.18,1.68),alpha:rand(.46,.82)*(.76+d*.30)};},mat(starTex,{opacity:.98,min:1.20,max:1.82,tw:.022}),6);renderer.render(scene,camera);
+if(loading){loading.innerHTML='REFERENCE PARTICLE FIELD READY<br><span style="opacity:.48">48×27 coordinate blueprint · points only</span>';setTimeout(()=>{loading.style.opacity='0';setTimeout(()=>loading.remove(),650);},180);}}
+
+const clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);for(const m of mats)m.uniforms.uTime.value+=dt;renderer.render(scene,camera);}animate();build().catch(e=>{console.error(e);if(loading)loading.innerHTML=`RENDER ERROR<br><span style="opacity:.7">${String(e.message||e)}</span>`;});let timer;addEventListener('resize',()=>{clearTimeout(timer);timer=setTimeout(()=>build(),180);});
